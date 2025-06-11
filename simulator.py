@@ -119,13 +119,12 @@ class Simulator:
 
             if node_id in self.blocked_nodes:
                 color = "pink"
-            else:
-                for msg in self.message_manager.messages:
-                    if not self.acknowledged[msg.message_id] and msg.timestamp <= current_time:
-                        if msg.source == node_id:
-                            color = "green"
-                        elif msg.destination == node_id:
-                            color = "red"
+            for msg in self.message_manager.messages:
+                if not self.acknowledged[msg.message_id] and msg.timestamp <= current_time:
+                    if msg.source == node_id:
+                        color = "green"
+                    elif msg.destination == node_id:
+                        color = "red"
 
             colors.append(color)
 
