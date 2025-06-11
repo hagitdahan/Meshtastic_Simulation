@@ -4,21 +4,22 @@ from message import MessageManager
 import networkx as nx
 
 class Simulator:
-    def __init__(self, num_nodes, simultaneous=True, routing_mode="flooding"):
+    def __init__(self, num_nodes,routing_mode="flooding"):
         self.network = Network(num_nodes)
         self.message_manager = MessageManager()
-        self.simultaneous = simultaneous
         self.routing_mode = routing_mode
         self.message_states = {}
         self.message_edges = {}
-        self.acknowledged = {}  # ENTER-based ack per message
-        self.fig, self.ax = plt.subplots(figsize=(10, 6))
+        self.acknowledged = {}  
+        self.fig, self.ax = plt.subplots(figsize=(16, 12))
         self.paused = True
         self.waiting_for_final_enter = False  # flag to wait for last ENTER
+        self.blocked_nodes = set()  # nodes that had a collision
+
 
     def setup_messages(self, num_messages):
         node_ids = list(self.network.nodes.keys())
-        self.message_manager.generate_random_pairs(num_messages, node_ids, self.simultaneous)
+        self.message_manager.generate_random_pairs(num_messages, node_ids)
         for msg in self.message_manager.messages:
             self.message_states[msg.message_id] = set([msg.source])
             self.message_edges[msg.message_id] = []
@@ -37,6 +38,8 @@ class Simulator:
             new_seen = set()
 
             for node in seen_nodes:
+                if node in self.blocked_nodes:
+                    continue  # Skip nodes that had a collision
                 for neighbor in graph.neighbors(node):
                     if neighbor not in seen_nodes:
                         new_seen.add(neighbor)
@@ -83,6 +86,11 @@ class Simulator:
                     if v not in message_hits:
                         message_hits[v] = 0
                     message_hits[v] += 1
+        
+        for node_id, count in message_hits.items():
+            if count > 1:
+                self.blocked_nodes.add(node_id)
+
 
         # Node coloring
         colors = []
@@ -96,9 +104,9 @@ class Simulator:
                         color = "green"
                     elif msg.destination == node_id:
                         color = "red"
-
             # Collision turns to pink
             if message_hits.get(node_id, 0) > 1:
+                print(f"number of {message_hits.get(node_id, 0)},node_id {node_id}")
                 color = "pink"
 
             colors.append(color)
