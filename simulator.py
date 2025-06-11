@@ -44,8 +44,10 @@ class Simulator:
                     if neighbor not in seen_nodes:
                         new_seen.add(neighbor)
                         self.message_edges[msg.message_id].append((node, neighbor))
-                        if neighbor == msg.destination:
-                            self.message_manager.mark_delivered(msg)
+                    if neighbor == msg.destination and neighbor not in self.blocked_nodes:
+                        self.message_manager.mark_delivered(msg)
+
+
 
             seen_nodes.update(new_seen)
         self.blocked_nodes.clear() 
@@ -123,25 +125,76 @@ class Simulator:
                 if idx < len(cmap):
                     nx.draw_networkx_edges(graph, pos, edgelist=edges, width=2, edge_color=cmap[idx], ax=self.ax)
 
-        # Right-side message panel
-        descriptions = []
+        # Separate messages by status
+        active_messages = []
+        completed_messages = []
+
         for m in self.message_manager.messages:
-            if m.delivered:
-                status = "Delivered"
-            elif m.expired:
-                status = "Expired"
-            elif m.timestamp > current_time:
+            if m.delivered or m.expired:
+                completed_messages.append(m)
+            else:
+                active_messages.append(m)
+
+        # Create message descriptions
+        active_descriptions = []
+        completed_descriptions = []
+
+        # Active messages (blue text)
+        for m in active_messages:
+            if m.timestamp > current_time:
                 status = "Waiting"
             else:
                 status = "Active"
             line = f"#{m.message_id}: {m.source}→{m.destination} | TTL={m.ttl} | T={m.timestamp} | {status}"
-            descriptions.append(line)
+            active_descriptions.append(line)
+
+        # Completed messages (green for delivered, red for expired)
+        for m in completed_messages:
+            if m.delivered:
+                status = "✓ Delivered"
+            else:
+                status = "✗ Expired"
+            line = f"#{m.message_id}: {m.source}→{m.destination} | TTL={m.ttl} | T={m.timestamp} | {status}"
+            completed_descriptions.append(line)
 
         # Clear old texts
         for txt in self.fig.texts:
             txt.set_visible(False)
-        self.fig.text(0.78, 0.5, "\n\n".join(descriptions), fontsize=10, va='center', ha='left', transform=self.fig.transFigure)
 
+        # Display active messages
+        if active_descriptions:
+            # Separate waiting and truly active messages
+            waiting_msgs = [line for line in active_descriptions if "Waiting" in line]
+            active_msgs = [line for line in active_descriptions if "Active" in line]
+           
+            y_pos = 0.7
+           
+            # Show waiting messages in black
+            if waiting_msgs:
+                self.fig.text(0.78, y_pos, "Waiting Messages:\n" + "\n".join(waiting_msgs),
+                            fontsize=9, va='top', ha='left', transform=self.fig.transFigure, color='black')
+                y_pos -= 0.15
+           
+            # Show active messages in blue
+            if active_msgs:
+                self.fig.text(0.78, y_pos, "Active Messages:\n" + "\n".join(active_msgs),
+                            fontsize=9, va='top', ha='left', transform=self.fig.transFigure, color='blue')
+
+        # Display completed messages
+        if completed_descriptions:
+            # Separate delivered and expired for different colors
+            delivered_msgs = [line for line in completed_descriptions if "✓" in line]
+            expired_msgs = [line for line in completed_descriptions if "✗" in line]
+           
+            y_pos = 0.4
+            if delivered_msgs:
+                self.fig.text(0.78, y_pos, "Completed Successfully:\n" + "\n".join(delivered_msgs),
+                            fontsize=9, va='top', ha='left', transform=self.fig.transFigure, color='green')
+                y_pos -= 0.15
+           
+            if expired_msgs:
+                self.fig.text(0.78, y_pos, "Failed/Expired:\n" + "\n".join(expired_msgs),
+                            fontsize=9, va='top', ha='left', transform=self.fig.transFigure, color='red')
         self.ax.set_title(f"Time: {current_time}")
         plt.pause(0.01)
 
