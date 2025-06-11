@@ -10,10 +10,12 @@ class Simulator:
         self.routing_mode = routing_mode
         self.message_states = {}
         self.message_edges = {}
-        self.acknowledged = {}  # ENTER-based ack per message
-        self.fig, self.ax = plt.subplots(figsize=(10, 6))
+        self.acknowledged = {}  
+        self.fig, self.ax = plt.subplots(figsize=(16, 12))
         self.paused = True
         self.waiting_for_final_enter = False  # flag to wait for last ENTER
+        self.blocked_nodes = set()  # nodes that had a collision
+
 
     def setup_messages(self, num_messages):
         node_ids = list(self.network.nodes.keys())
