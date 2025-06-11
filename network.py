@@ -47,7 +47,7 @@ class Network:
         # Adaptive minimum distance - smaller for more nodes
         base_distance = self.space_size / math.sqrt(self.num_nodes * 2.5)
         min_distance = max(2, base_distance)
-        
+       
         max_attempts = self.num_nodes * 800
         placed = 0
         attempts = 0
@@ -58,58 +58,58 @@ class Network:
 
         # Start with Poisson disk sampling approach for better distribution
         while placed < self.num_nodes and attempts < max_attempts:
-            
+           
             if attempts < max_attempts // 4:
                 # Phase 1: Random with rejection sampling
                 x = random.uniform(min_distance, self.space_size - min_distance)
                 y = random.uniform(min_distance, self.space_size - min_distance)
-                
+               
             elif attempts < max_attempts // 2:
                 # Phase 2: Hexagonal grid with noise for better packing
                 rows = int(math.ceil(math.sqrt(self.num_nodes)))
                 cols = int(math.ceil(self.num_nodes / rows))
-                
+               
                 row = placed // cols
                 col = placed % cols
-                
+               
                 # Hexagonal offset for every other row
                 offset_x = (min_distance * 0.8) if row % 2 == 1 else 0
-                
+               
                 spacing_x = (self.space_size - 2 * min_distance) / max(1, cols - 1)
                 spacing_y = (self.space_size - 2 * min_distance) / max(1, rows - 1)
-                
+               
                 base_x = min_distance + col * spacing_x + offset_x
                 base_y = min_distance + row * spacing_y
-                
+               
                 # Add controlled randomness
                 noise = min_distance * 0.3
                 x = base_x + random.uniform(-noise, noise)
                 y = base_y + random.uniform(-noise, noise)
-                
+               
                 # Keep within bounds
                 x = max(min_distance, min(self.space_size - min_distance, x))
                 y = max(min_distance, min(self.space_size - min_distance, y))
-                
+               
             else:
                 # Phase 3: Force-based placement - find largest empty area
                 best_x, best_y = 0, 0
                 max_min_dist = 0
-                
+               
                 # Try multiple random points and pick the one farthest from existing nodes
                 for _ in range(50):
                     test_x = random.uniform(min_distance, self.space_size - min_distance)
                     test_y = random.uniform(min_distance, self.space_size - min_distance)
-                    
+                   
                     # Find minimum distance to existing nodes
                     min_dist_to_existing = float('inf')
                     for ex_x, ex_y in positions:
                         dist = math.dist((test_x, test_y), (ex_x, ex_y))
                         min_dist_to_existing = min(min_dist_to_existing, dist)
-                    
+                   
                     if min_dist_to_existing > max_min_dist:
                         max_min_dist = min_dist_to_existing
                         best_x, best_y = test_x, test_y
-                
+               
                 x, y = best_x, best_y
 
             # Check distance constraint
@@ -117,7 +117,7 @@ class Network:
                 math.dist((x, y), (pos_x, pos_y)) < min_distance
                 for pos_x, pos_y in positions
             )
-            
+           
             if too_close:
                 attempts += 1
                 # Gradually reduce min_distance if we're having trouble
@@ -142,7 +142,7 @@ class Network:
             self.num_nodes = placed
 
         print(f"Successfully placed {placed} nodes with average separation: {min_distance:.2f}")
-        
+       
         self.communication_radius = self._calculate_communication_radius(target_avg=4)
         self._create_edges()
 
@@ -150,40 +150,40 @@ class Network:
         """Analyze and print node distribution quality"""
         if len(self.nodes) < 2:
             return
-        
+       
         positions = [(node.x, node.y) for node in self.nodes.values()]
-        
+       
         # Calculate all pairwise distances
         distances = []
         for i in range(len(positions)):
             for j in range(i + 1, len(positions)):
                 dist = math.dist(positions[i], positions[j])
                 distances.append(dist)
-        
+       
         # Statistics
         min_dist = min(distances)
         max_dist = max(distances)
         avg_dist = sum(distances) / len(distances)
-        
+       
         # Calculate distribution uniformity (coefficient of variation)
         variance = sum((d - avg_dist) ** 2 for d in distances) / len(distances)
         std_dev = math.sqrt(variance)
         cv = std_dev / avg_dist if avg_dist > 0 else 0
-        
+       
         # Divide space into grid and count nodes per cell
         grid_size = 5
         cell_width = self.space_size / grid_size
         cell_counts = {}
-        
+       
         for x, y in positions:
             cell_x = int(x // cell_width)
             cell_y = int(y // cell_width)
             cell_key = (cell_x, cell_y)
             cell_counts[cell_key] = cell_counts.get(cell_key, 0) + 1
-        
+       
         # Expected nodes per cell for uniform distribution
         expected_per_cell = len(positions) / (grid_size * grid_size)
-        
+       
         print(f"\n=== DISTRIBUTION ANALYSIS ===")
         print(f"Nodes placed: {len(positions)}")
         print(f"Space size: {self.space_size}x{self.space_size}")
@@ -193,12 +193,12 @@ class Network:
         print(f"Distance std dev: {std_dev:.2f}")
         print(f"Uniformity (lower is better): {cv:.3f}")
         print(f"Expected nodes per {grid_size}x{grid_size} cell: {expected_per_cell:.1f}")
-        
+       
         # Show cell distribution
         non_empty_cells = len([c for c in cell_counts.values() if c > 0])
         total_cells = grid_size * grid_size
         print(f"Occupied cells: {non_empty_cells}/{total_cells}")
-        
+       
         if cv < 0.5:
             print("✓ Good distribution")
         elif cv < 0.8:
@@ -206,14 +206,14 @@ class Network:
         else:
             print("✗ Poor distribution - consider adjusting parameters")
         print("=" * 30)
-    
+   
     def _calculate_communication_radius(self, target_avg=4):
         if len(self.nodes) < 2:
             return self.space_size / 4
-            
+           
         dists = []
         node_list = list(self.nodes.values())
-        
+       
         # For large networks - sample for better performance
         if len(node_list) > 50:
             sample_size = 2000
@@ -225,23 +225,23 @@ class Network:
             for i in range(len(node_list)):
                 for j in range(i + 1, len(node_list)):
                     dists.append(self._distance(node_list[i], node_list[j]))
-        
+       
         dists.sort()
-        
+       
         # Binary search for optimal radius
         min_r, max_r = min(dists), max(dists)
-        
+       
         for _ in range(15):
             mid_r = (min_r + max_r) / 2
             avg = self._average_neighbors(mid_r)
-            
+           
             if abs(avg - target_avg) < 0.3:
                 return mid_r
             elif avg < target_avg:
                 min_r = mid_r
             else:
                 max_r = mid_r
-                
+               
         return (min_r + max_r) / 2
 
     def _average_neighbors(self, radius):

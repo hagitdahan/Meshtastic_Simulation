@@ -48,6 +48,7 @@ class Simulator:
                             self.message_manager.mark_delivered(msg)
 
             seen_nodes.update(new_seen)
+        self.blocked_nodes.clear() 
 
     def run_gui(self):
         self.visualize()
@@ -95,8 +96,11 @@ class Simulator:
         # Node coloring
         colors = []
         for node_id in graph.nodes:
-            color = "lightblue"
-
+            color = "lightblue"   # Collision turns to pink
+            if node_id in self.blocked_nodes:
+                #print(f"number of {message_hits.get(node_id, 0)},node_id {node_id}")
+                color = "pink"
+        
             # Check if part of an active (not yet acknowledged) message
             for msg in self.message_manager.messages:
                 if not self.acknowledged[msg.message_id] and msg.timestamp <= current_time:
@@ -104,10 +108,6 @@ class Simulator:
                         color = "green"
                     elif msg.destination == node_id:
                         color = "red"
-            # Collision turns to pink
-            if message_hits.get(node_id, 0) > 1:
-                print(f"number of {message_hits.get(node_id, 0)},node_id {node_id}")
-                color = "pink"
 
             colors.append(color)
 
