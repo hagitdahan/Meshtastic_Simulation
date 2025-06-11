@@ -1,12 +1,12 @@
 import random
 
 class Message:
-    def __init__(self, message_id, source, destination, timestamp):
-        self.message_id = message_id
+    def __init__(self, source, destination,timestamp, ttl, message_id):
         self.source = source
         self.destination = destination
         self.timestamp = timestamp
         self.ttl = random.randint(3, 6)
+        self.message_id = message_id
         self.active = False
         self.delivered = False
         self.expired = False
@@ -16,19 +16,15 @@ class MessageManager:
         self.messages = []
         self.current_time = 0
 
-    def generate_random_pairs(self, num_messages, node_ids, simultaneous=True):
+    def generate_random_pairs(self, num_messages, node_ids):
         self.messages = []
-        used_pairs = set()
         for i in range(num_messages):
-            while True:
-                source = random.choice(node_ids)
-                destination = random.choice(node_ids)
-                if source != destination and (source, destination) not in used_pairs:
-                    used_pairs.add((source, destination))
-                    break
-            timestamp = 0 if simultaneous else i  # messages released all at once or one-by-one
-            msg = Message(message_id=i, source=source, destination=destination, timestamp=timestamp)
+            source, dest = random.sample(node_ids, 2)
+            timestamp = random.randint(1, 50)
+            ttl = random.randint(5, 15)
+            msg = Message(source, dest, timestamp, ttl, i)
             self.messages.append(msg)
+
 
     def advance_time(self):
         self.current_time += 1
