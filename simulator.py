@@ -12,10 +12,10 @@ class Simulator:
         self.message_states = {}
         self.message_edges = {}
         self.acknowledged = {}  # ENTER-based ack per message
-        self.fig, self.ax = plt.subplots(figsize=(10, 6))
+        self.fig, self.ax = plt.subplots(figsize=(16, 12))  # Much larger window
         self.paused = True
-        self.waiting_for_final_enter = False  # flag to wait for last ENTER
-
+        self.waiting_for_final_enter = False
+        
     def setup_messages(self, num_messages):
         node_ids = list(self.network.nodes.keys())
         self.message_manager.generate_random_pairs(num_messages, node_ids, self.simultaneous)
