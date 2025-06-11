@@ -30,6 +30,23 @@ class Simulator:
         graph = self.network.get_graph()
         time = self.message_manager.current_time
 
+        # Prepare to detect collisions
+        message_hits = {}  # node_id -> count of incoming messages
+
+        # First pass to count hits per node
+        for msg in self.message_manager.get_active_messages():
+            if time < msg.timestamp or msg.delivered or msg.expired:
+                continue
+            seen_nodes = self.message_states[msg.message_id]
+            for node in seen_nodes:
+                for neighbor in graph.neighbors(node):
+                    if neighbor not in seen_nodes:
+                        message_hits[neighbor] = message_hits.get(neighbor, 0) + 1
+
+        # Detect collisions
+        self.blocked_nodes = {node_id for node_id, count in message_hits.items() if count > 1}
+
+        # Second pass to spread messages
         for msg in self.message_manager.get_active_messages():
             if time < msg.timestamp or msg.delivered or msg.expired:
                 continue
@@ -39,18 +56,18 @@ class Simulator:
 
             for node in seen_nodes:
                 if node in self.blocked_nodes:
-                    continue  # Skip nodes that had a collision
+                    continue  # skip spreading from collided node
                 for neighbor in graph.neighbors(node):
+                    if neighbor in self.blocked_nodes:
+                        continue  # don't forward to a collided node
                     if neighbor not in seen_nodes:
                         new_seen.add(neighbor)
                         self.message_edges[msg.message_id].append((node, neighbor))
-                    if neighbor == msg.destination and neighbor not in self.blocked_nodes:
+                    if neighbor == msg.destination:
                         self.message_manager.mark_delivered(msg)
 
-
-
             seen_nodes.update(new_seen)
-        self.blocked_nodes.clear() 
+
 
     def run_gui(self):
         self.visualize()
@@ -98,20 +115,20 @@ class Simulator:
         # Node coloring
         colors = []
         for node_id in graph.nodes:
-            color = "lightblue"   # Collision turns to pink
+            color = "lightblue"
+
             if node_id in self.blocked_nodes:
-                #print(f"number of {message_hits.get(node_id, 0)},node_id {node_id}")
                 color = "pink"
-        
-            # Check if part of an active (not yet acknowledged) message
-            for msg in self.message_manager.messages:
-                if not self.acknowledged[msg.message_id] and msg.timestamp <= current_time:
-                    if msg.source == node_id:
-                        color = "green"
-                    elif msg.destination == node_id:
-                        color = "red"
+            else:
+                for msg in self.message_manager.messages:
+                    if not self.acknowledged[msg.message_id] and msg.timestamp <= current_time:
+                        if msg.source == node_id:
+                            color = "green"
+                        elif msg.destination == node_id:
+                            color = "red"
 
             colors.append(color)
+
 
         # Draw base graph and colored nodes
         nx.draw_networkx_edges(graph, pos, ax=self.ax, alpha=0.3)
